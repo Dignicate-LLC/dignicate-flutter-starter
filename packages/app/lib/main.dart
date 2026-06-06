@@ -1,6 +1,7 @@
 import 'package:app/prod_deps.dart';
 import 'package:flutter/material.dart';
 import 'package:core/utils/logger_util.dart';
+import 'package:providers/app_deps_scope.dart';
 import 'package:ui/common/app_config.dart';
 import 'package:ui/route/coordinator.dart';
 import 'package:ui/route/route.dart';
@@ -27,16 +28,19 @@ class TheApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppConfigScope(
-      config: config,
-      child: MaterialApp.router(
-        routerConfig: goRouter,
-        builder: (context, child) {
-          return CoordinatorProvider(
-            coordinator: const Coordinator(),
-            child: child!,
-          );
-        },
+    return AppDepsScope(
+      deps: ProdDeps(),
+      child: AppConfigScope(
+        config: config,
+        child: MaterialApp.router(
+          routerConfig: goRouter,
+          builder: (context, child) {
+            return CoordinatorProvider(
+              coordinator: const Coordinator(),
+              child: child!,
+            );
+          },
+        ),
       ),
     );
   }

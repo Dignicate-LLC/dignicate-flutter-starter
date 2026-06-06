@@ -4,8 +4,12 @@ import 'package:ui/common/app_config.dart';
 import 'package:ui/common/app_drawer.dart';
 import 'package:ui/common/custom_app_bar.dart';
 import 'package:ui/features/home/home_navigation_container.dart';
+import 'package:ui/features/home/home_tab_screen.dart';
 import 'package:ui/debug/debug_menu_screen.dart';
 import 'package:ui/launch/launch_screen.dart';
+import 'package:providers/app_deps_scope.dart';
+import 'package:viewmodel/domain_module.dart';
+import 'package:viewmodel/viewmodel_module.dart';
 
 part 'route.g.dart';
 
@@ -139,9 +143,7 @@ class HomeRoute extends GoRouteData with $HomeRoute {
         version: config.version,
         showsDebugMenu: config.showsDebugMenu,
       ),
-      body: const Center(
-        child: Text('Home'),
-      ),
+      body: HomeTabScreen(viewModel: makeHomeViewModel(makeTimeUseCase(AppDepsScope.of(context)))),
     );
   }
 }
