@@ -55,9 +55,14 @@ abstract interface class XxxUseCase {
 - `dispose()` で必ず `_controller.close()` を呼ぶ。
 
 ### ViewModel 側の責務
-- コンストラクタで `useCase.data.map(_toUiState).listen(...)` を購読し、`StreamSubscription` を保持する。
+- コンストラクタで `useCase.data.listen(...)` を購読し、`StreamSubscription` を保持する。
+- `listen` 内では `resource.when(data: ..., inProgress: ..., error: ..., unauthorized: () {})` で各ケースを処理し、`_uiState = _uiState.onData(...)` / `_uiState = _uiState.onInProgress()` / `_uiState = _uiState.onError(...)` を呼んで `_uiState` を更新する。`unauthorized` は本テンプレートでは未使用のため空実装とする。
 - `dispose()` で `_subscription.cancel()` と `useCase.dispose()` を呼ぶ。
 - `onAppear()` / `onRefresh()` 等のイベントハンドラから `useCase.fetch()` を呼ぶだけにする。
+
+### UiState の責務
+- `_copyWith` は private にし、外部には `onData()` / `onInProgress()` / `onError()` のみを公開する。
+- 各メソッドが状態遷移の意図を明示し、ViewModel 側で `copyWith` の詳細を意識しなくて済む設計にする。
 
 ### KMP との対応
 | KMP (Kotlin) | Flutter (Dart) |
