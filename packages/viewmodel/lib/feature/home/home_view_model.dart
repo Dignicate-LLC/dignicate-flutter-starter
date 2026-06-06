@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:domain/resource.dart';
 import 'package:domain/time/time_use_case.dart';
 import 'package:flutter/foundation.dart';
@@ -5,38 +6,34 @@ import 'package:viewmodel/feature/home/home_ui_state.dart';
 
 class HomeViewModel extends ChangeNotifier {
   final TimeUseCase _timeUseCase;
+  late final StreamSubscription<HomeUiState> _subscription;
 
-  HomeViewModel(this._timeUseCase);
+  HomeViewModel(this._timeUseCase) {
+    _subscription = _timeUseCase.data.map(_toUiState).listen((uiState) {
+      _uiState = uiState;
+      notifyListeners();
+    });
+  }
 
   HomeUiState _uiState = const HomeUiState();
   HomeUiState get uiState => _uiState;
 
-  void onAppear() {
-    _fetch();
-  }
+  void onAppear() => _timeUseCase.fetch();
+  void onRefresh() => _timeUseCase.fetch();
 
-  void onRefresh() {
-    _fetch();
-  }
-
-  void _fetch() async {
-    final currentState = _uiState;
-    _uiState = currentState.copyWith(isLoading: true, errorMessage: null);
-    notifyListeners();
-
-    final resource = await _timeUseCase.fetch();
-    _uiState = switch (resource) {
+  HomeUiState _toUiState(Resource<dynamic> resource) {
+    return switch (resource) {
+      Resource.inProgress() => _uiState.copyWith(isLoading: true, errorMessage: null),
       Resource.data(:final data) => HomeUiState(currentTime: data.iso8601),
-      Resource.inProgress() => _uiState,
-      Resource.unauthorized() => _uiState.copyWith(
-          isLoading: false,
-          errorMessage: 'Unauthorized',
-        ),
-      Resource.error(:final message) => _uiState.copyWith(
-          isLoading: false,
-          errorMessage: message,
-        ),
+      Resource.unauthorized() => _uiState.copyWith(isLoading: false, errorMessage: 'Unauthorized'),
+      Resource.error(:final message) => _uiState.copyWith(isLoading: false, errorMessage: message),
     };
-    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    _timeUseCase.dispose();
+    super.dispose();
   }
 }

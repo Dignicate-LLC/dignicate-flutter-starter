@@ -3,4 +3,4 @@ import 'package:providers/app_deps.dart';
 
 // use case providers
 
-TimeUseCase makeTimeUseCase(AppDeps deps) => TimeUseCase(deps.timeRepository);
+TimeUseCase makeTimeUseCase(AppDeps deps) => TimeUseCaseImpl(deps.timeRepository);
