@@ -15,7 +15,6 @@ class HomeViewModel extends ChangeNotifier {
         data: (data) => _uiState = _uiState.onData(data.iso8601),
         inProgress: () => _uiState = _uiState.onInProgress(),
         error: (message) => _uiState = _uiState.onError(message),
-        unauthorized: () {},
       );
       notifyListeners();
     });
