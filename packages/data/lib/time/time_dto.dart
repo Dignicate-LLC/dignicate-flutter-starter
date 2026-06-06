@@ -6,7 +6,6 @@ part 'time_dto.g.dart';
 class TimeDto {
   final String utc;
   final int millis;
-  @JsonKey(name: 'unix_seconds')
   final int unixSeconds;
   final String iso8601;
 

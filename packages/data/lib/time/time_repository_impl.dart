@@ -1,3 +1,4 @@
+import 'package:core/utils/logger_util.dart';
 import 'package:data/api/time_api_client.dart';
 import 'package:dio/dio.dart';
 import 'package:domain/resource.dart';
@@ -21,9 +22,11 @@ class TimeRepositoryImpl implements TimeRepository {
           iso8601: dto.iso8601,
         ),
       );
-    } on DioException catch (e) {
+    } on DioException catch (e, stackTrace) {
+      logger.e('TimeRepositoryImpl DioException', error: e, stackTrace: stackTrace);
       return Resource.error(message: e.message ?? 'Network error');
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logger.e('TimeRepositoryImpl unexpected error', error: e, stackTrace: stackTrace);
       return Resource.error(message: e.toString());
     }
   }

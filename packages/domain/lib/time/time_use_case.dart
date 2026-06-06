@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:core/utils/logger_util.dart';
 import 'package:domain/resource.dart';
 import 'package:domain/time/time_info.dart';
 import 'package:domain/time/time_repository.dart';
@@ -25,7 +26,8 @@ class TimeUseCaseImpl implements TimeUseCase {
 
     _fetchInternal().then((result) {
       _dataController.add(result);
-    }).catchError((error) {
+    }).catchError((error, stackTrace) {
+      logger.e('TimeUseCase fetch error', error: error, stackTrace: stackTrace);
       _dataController.add(Resource.error(message: error.toString()));
     });
   }
@@ -33,7 +35,8 @@ class TimeUseCaseImpl implements TimeUseCase {
   Future<Resource<TimeInfo>> _fetchInternal() async {
     try {
       return await _repository.getCurrentTime();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logger.e('TimeUseCase _fetchInternal error', error: e, stackTrace: stackTrace);
       return Resource.error(message: e.toString());
     }
   }
