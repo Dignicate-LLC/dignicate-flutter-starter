@@ -1,9 +1,9 @@
-class HomeViewState {
+class HomeUiState {
   final bool isLoading;
   final String? currentTime;
   final String? errorMessage;
 
-  const HomeViewState({
+  const HomeUiState({
     this.isLoading = false,
     this.currentTime,
     this.errorMessage,
@@ -11,12 +11,12 @@ class HomeViewState {
 
   bool get isRefreshing => isLoading && currentTime != null;
 
-  HomeViewState copyWith({
+  HomeUiState copyWith({
     bool? isLoading,
     Object? currentTime = _sentinel,
     Object? errorMessage = _sentinel,
   }) {
-    return HomeViewState(
+    return HomeUiState(
       isLoading: isLoading ?? this.isLoading,
       currentTime: currentTime == _sentinel ? this.currentTime : currentTime as String?,
       errorMessage: errorMessage == _sentinel ? this.errorMessage : errorMessage as String?,
