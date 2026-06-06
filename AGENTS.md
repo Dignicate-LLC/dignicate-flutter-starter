@@ -34,7 +34,49 @@
     - アプリ全体の共通サイドメニュー。
     - バージョン情報などは `AppConfig` から動的に取得。
 
-## 4. 今後の課題・予定
+## 4. UseCase 実装パターン (UseCase Implementation Pattern)
+
+### 基本構造
+UseCase は **interface と impl を分離** して定義する。
+
+```dart
+abstract interface class XxxUseCase {
+  Stream<Resource<XxxData>> get data; // データストリーム（購読用）
+  void fetch();                        // トリガー（emit のみ）
+  void dispose();
+}
+```
+
+### 実装クラスの責務
+- `StreamController` を内部に保持し、外部には `Stream` のみ公開する。
+- `fetch()` は以下の順序で処理する：
+  1. `_controller.add(const Resource.inProgress())` を即時 emit
+  2. `_fetchInternal().then((result) => _controller.add(result))` で結果を emit
+- `dispose()` で必ず `_controller.close()` を呼ぶ。
+
+### ViewModel 側の責務
+- コンストラクタで `useCase.data.listen(...)` を購読し、`StreamSubscription` を保持する。
+- `listen` 内では `resource.when(data: ..., inProgress: ..., error: ..., unauthorized: () {})` で各ケースを処理し、`_uiState = _uiState.onData(...)` / `_uiState = _uiState.onInProgress()` / `_uiState = _uiState.onError(...)` を呼んで `_uiState` を更新する。`unauthorized` は本テンプレートでは未使用のため空実装とする。
+- `dispose()` で `_subscription.cancel()` と `useCase.dispose()` を呼ぶ。
+- `onAppear()` / `onRefresh()` 等のイベントハンドラから `useCase.fetch()` を呼ぶだけにする。
+
+### UiState の責務
+- `_copyWith` は private にし、外部には `onData()` / `onInProgress()` / `onError()` のみを公開する。
+- 各メソッドが状態遷移の意図を明示し、ViewModel 側で `copyWith` の詳細を意識しなくて済む設計にする。
+
+### KMP との対応
+| KMP (Kotlin) | Flutter (Dart) |
+|---|---|
+| `MutableSharedFlow<Unit>` (trigger) | `StreamController<void>` |
+| `StateFlow<Resource<T>>` (data) | `Stream<Resource<T>>` |
+| `viewModelScope.launch { useCase.data.collect { } }` | `useCase.data.listen(...)` |
+| `useCase.fetch()` (emit のみ) | `useCase.fetch()` (add のみ) |
+
+### 参考実装
+- coNPus: `packages/domain/lib/top/top_page_use_case.dart`
+- dignicate-flutter-starter: `packages/domain/lib/time/time_use_case.dart`
+
+## 5. 今後の課題・予定
 
 - 各画面固有の状態管理が必要な場合、`viewmodel` レイヤーとの連携方法を確立する。
 - `AGENTS.md` を随時更新し、実装の意図を明文化していく。
