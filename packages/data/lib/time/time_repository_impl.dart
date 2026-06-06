@@ -1,19 +1,28 @@
+import 'package:data/api/time_api_client.dart';
+import 'package:dio/dio.dart';
 import 'package:domain/resource.dart';
 import 'package:domain/time/time_info.dart';
 import 'package:domain/time/time_repository.dart';
 
 class TimeRepositoryImpl implements TimeRepository {
+  final TimeApiClient _apiClient;
+
+  TimeRepositoryImpl(this._apiClient);
+
   @override
   Future<Resource<TimeInfo>> getCurrentTime() async {
     try {
-      final now = DateTime.now();
-      final timeInfo = TimeInfo(
-        utc: now.toUtc().toIso8601String(),
-        millis: now.millisecondsSinceEpoch,
-        unixSeconds: now.millisecondsSinceEpoch ~/ 1000,
-        iso8601: now.toIso8601String(),
+      final dto = await _apiClient.getTime();
+      return Resource.data(
+        data: TimeInfo(
+          utc: dto.utc,
+          millis: dto.millis,
+          unixSeconds: dto.unixSeconds,
+          iso8601: dto.iso8601,
+        ),
       );
-      return Resource.data(data: timeInfo);
+    } on DioException catch (e) {
+      return Resource.error(message: e.message ?? 'Network error');
     } catch (e) {
       return Resource.error(message: e.toString());
     }

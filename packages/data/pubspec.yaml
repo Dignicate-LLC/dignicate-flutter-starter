@@ -14,7 +14,7 @@ dependencies:
     path: ../core
   domain:
     path: ../domain
-  chopper: ^8.3.0
+  dio: ^5.7.0
   json_annotation: ^4.8.1
   equatable: ^2.0.5
   shared_preferences: ^2.1.1
@@ -26,7 +26,6 @@ dependencies:
 # Keep flutter section minimal / omitted.
 
 dev_dependencies:
-  chopper_generator: ^8.2.0
   json_serializable: ^6.7.1
   build_runner: ^2.7.1
   freezed: ^3.1.0

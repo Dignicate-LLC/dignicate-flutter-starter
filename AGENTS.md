@@ -76,7 +76,56 @@ abstract interface class XxxUseCase {
 - coNPus: `packages/domain/lib/top/top_page_use_case.dart`
 - dignicate-flutter-starter: `packages/domain/lib/time/time_use_case.dart`
 
-## 5. 今後の課題・予定
+## 5. HTTPクライアント実装パターン (HTTP Client Implementation Pattern)
+
+- HTTPクライアントには **`dio`** を使用する。
+- `dio` の存在は `data` パッケージの以下2ファイルにのみ閉じ込める（他のレイヤーは `dio` を知らない）：
+  - `lib/api/api_client.dart`（`Dio` インスタンスのファクトリ関数 `buildDioClient()`）
+  - `lib/api/xxx_api_client_impl.dart`（各エンドポイントの dio 実装）
+- 各機能の API クライアントは `abstract interface class XxxApiClient` として定義し、`XxxRepositoryImpl` は interface にのみ依存する。
+- `DioException` のキャッチは `XxxRepositoryImpl` 内で行い、`Resource.error(...)` に変換する。
+
+### 実装ファイル構成
+
+```
+packages/data/lib/
+  api/
+    api_client.dart          # Dio インスタンスのファクトリ（dioはここに閉じ込め）
+    time_api_client.dart     # abstract interface class（dio依存なし）
+    time_api_client_impl.dart # dio実装（dioはここにのみ登場）
+  time/
+    time_dto.dart            # JSON DTO（json_serializable）
+    time_dto.g.dart          # build_runner で自動生成（コミット対象）
+    time_repository_impl.dart # TimeApiClient にのみ依存
+```
+
+### DI の組み立て（ProdDeps）
+
+```dart
+final _dio = buildDioClient();
+late final TimeApiClient timeApiClient = TimeApiClientImpl(_dio);
+late final TimeRepository timeRepository = TimeRepositoryImpl(timeApiClient);
+```
+
+### KMP との対応
+
+| KMP (Ktor) | Flutter (dio) |
+|---|---|
+| `HttpClient` | `Dio` |
+| `TimeApiClient` (interface) | `TimeApiClient` (abstract interface class) |
+| `TimeApiClientImpl` | `TimeApiClientImpl` |
+| `TimeDto.toDomainObject()` | `TimeRepositoryImpl` 内でインライン変換 |
+
+### コード生成
+
+DTO を変更した際は以下を実行：
+
+```bash
+cd packages/data
+dart run build_runner build --delete-conflicting-outputs
+```
+
+## 6. 今後の課題・予定
 
 - 各画面固有の状態管理が必要な場合、`viewmodel` レイヤーとの連携方法を確立する。
 - `AGENTS.md` を随時更新し、実装の意図を明文化していく。
