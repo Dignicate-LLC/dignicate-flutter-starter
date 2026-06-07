@@ -1,19 +1,21 @@
 import 'package:core/utils/logger_util.dart';
-import 'package:data/api/time_api_client.dart';
+import 'package:data/api/api_wrapper.dart';
+import 'package:data/time/time_dto.dart';
 import 'package:dio/dio.dart';
 import 'package:domain/resource.dart';
 import 'package:domain/time/time_info.dart';
 import 'package:domain/time/time_repository.dart';
 
 class TimeRepositoryImpl implements TimeRepository {
-  final TimeApiClient _apiClient;
+  final ApiWrapper _apiWrapper;
 
-  TimeRepositoryImpl(this._apiClient);
+  TimeRepositoryImpl(this._apiWrapper);
 
   @override
   Future<Resource<TimeInfo>> getCurrentTime() async {
     try {
-      final dto = await _apiClient.getTime();
+      final response = await _apiWrapper.get<Map<String, dynamic>>('/time/v1/current');
+      final dto = TimeDto.fromJson(response.data!);
       return Resource.data(
         data: TimeInfo(
           utc: dto.utc,
