@@ -24,33 +24,70 @@ class _HomeTabScreenState extends State<HomeTabScreen> {
       listenable: widget.viewModel,
       builder: (context, _) {
         final HomeUiState state = widget.viewModel.uiState;
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (state.isLoading)
-                const CircularProgressIndicator()
-              else
-                Text(
-                  state.currentTime ?? '--',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-              if (state.errorMessage != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  state.errorMessage!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (state.isLoading)
+                  const CircularProgressIndicator()
+                else
+                  _TimeDisplayWidget(time: state.currentTime),
+                if (state.errorMessage != null) ...[
+                  const SizedBox(height: 16),
+                  _ErrorDisplayWidget(message: state.errorMessage!),
+                ],
+                const SizedBox(height: 32),
+                _RefreshButton(
+                  onPressed: state.isLoading ? null : widget.viewModel.onRefresh,
                 ),
               ],
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: state.isLoading ? null : widget.viewModel.onRefresh,
-                child: const Text('Refresh'),
-              ),
-            ],
+            ),
           ),
         );
       },
+    );
+  }
+}
+
+class _TimeDisplayWidget extends StatelessWidget {
+  final String? time;
+  const _TimeDisplayWidget({required this.time});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      time ?? '--',
+      style: Theme.of(context).textTheme.headlineSmall,
+      textAlign: TextAlign.center,
+    );
+  }
+}
+
+class _ErrorDisplayWidget extends StatelessWidget {
+  final String message;
+  const _ErrorDisplayWidget({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      message,
+      style: TextStyle(color: Theme.of(context).colorScheme.error),
+      textAlign: TextAlign.center,
+    );
+  }
+}
+
+class _RefreshButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+  const _RefreshButton({this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      child: const Text('Refresh'),
     );
   }
 }
