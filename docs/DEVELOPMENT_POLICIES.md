@@ -1,0 +1,129 @@
+# Implementation Policies & Project Notes
+
+This file is intended for development agents and developers to share project policies and to keep them updated.
+
+## 1. Core Principles
+
+- **Independence of UI Layer**: `packages/ui` must maintain a clean architecture, independent of any specific state management libraries (e.g., Riverpod).
+- **Stateless Priority**: Common components should be implemented as `StatelessWidget` as much as possible, with necessary information injected from the outside.
+- **Use of Standard APIs**: Use Flutter's standard `InheritedWidget` for state propagation, and `Navigator` API or `go_router` for navigation.
+
+## 2. Architectural Decisions
+
+### Avoiding Dependency on Specific State Management Libraries (Riverpod)
+- All dependencies on `hooks_riverpod` have been removed from `packages/ui`.
+- **Background and Purpose**:
+    - Concern about binding the entire project to a specific library.
+    - Riverpod's tendency to allow broad access can lead to the inclusion of business logic in the UI layer or create unexpected dependencies.
+    - To maintain the purity of the UI layer, improve reusability, and enhance testability.
+
+### App Configuration Management
+- Introduced `AppConfigScope` (`InheritedWidget`).
+- **Centralized Initialization**: App version info, environment variables (`.env`), and environment identifiers (`ENV`) are batch-loaded via `AppConfig.load()` and held in the `AppConfig` class.
+- **Access Method**: Pass the `AppConfig` obtained in `main.dart` to `AppConfigScope`, and distribute it throughout the widget tree via `AppConfigScope.of(context)`.
+- **Benefits**: Prevents `main.dart` from becoming bloated and provides type-safe, simple access to configuration values from the UI layer.
+
+## 3. Key Components
+
+- **CustomAppBar**:
+    - Common header based on design definitions.
+    - Properties allow toggling of back buttons and menu buttons (linked to Drawer).
+    - Uses project-specific `ThemeExtension`.
+- **AppDrawer**:
+    - Common side menu for the entire app.
+    - Dynamically retrieves version information from `AppConfig`.
+
+## 4. UseCase Implementation Pattern
+
+### Basic Structure
+Define UseCases by **separating interface and implementation**.
+
+```dart
+abstract interface class XxxUseCase {
+  Stream<Resource<XxxData>> get data; // Data stream (for subscription)
+  void fetch();                        // Trigger (emit only)
+  void dispose();
+}
+```
+
+### Responsibility of Implementation Class
+- Maintain a `StreamController` internally and expose only the `Stream`.
+- `fetch()` should process in this order:
+  1. `_controller.add(const Resource.inProgress())` emitted immediately.
+  2. Result emitted via `_fetchInternal().then((result) => _controller.add(result))`.
+- Always call `_controller.close()` in `dispose()`.
+
+### Responsibility of ViewModel
+- Subscribe to `useCase.data.listen(...)` in the constructor and hold the `StreamSubscription`.
+- Use `resource.when(data: ..., inProgress: ..., error: ..., unauthorized: () {})` inside `listen` to handle each case and call `_uiState.onData(...)` / `_uiState.onInProgress()` / `_uiState.onError(...)`.
+- Call `_subscription.cancel()` and `useCase.dispose()` in `dispose()`.
+- Simply call `useCase.fetch()` from event handlers like `onAppear()` or `onRefresh()`.
+
+### Responsibility of UiState
+- Make `_copyWith` private and expose only `onData()` / `onInProgress()` / `onError()`.
+- Explicitly define the intent of state transitions so the ViewModel doesn't need to handle `copyWith` details.
+
+### KMP Correspondence
+| KMP (Kotlin) | Flutter (Dart) |
+|---|---|
+| `MutableSharedFlow<Unit>` (trigger) | `StreamController<void>` |
+| `StateFlow<Resource<T>>` (data) | `Stream<Resource<T>>` |
+| `viewModelScope.launch { useCase.data.collect { } }` | `useCase.data.listen(...)` |
+| `useCase.fetch()` (emit only) | `useCase.fetch()` (add only) |
+
+### Reference Implementation
+- coNPus: `packages/domain/lib/top/top_page_use_case.dart`
+- dignicate-flutter-starter: `packages/domain/lib/time/time_use_case.dart`
+
+## 5. HTTP Client Implementation Pattern
+
+- Use **`dio`** for the HTTP client.
+- Confine `dio` usage to two files in the `data` package (other layers are unaware of `dio`):
+  - `lib/api/api_client.dart` (Factory function `buildDioClient()` for `Dio` instance)
+  - `lib/api/xxx_api_client_impl.dart` (dio implementation for each endpoint)
+- Define API clients as `abstract interface class XxxApiClient`, with `XxxRepositoryImpl` depending only on the interface.
+- Catch `DioException` within `XxxRepositoryImpl` and convert to `Resource.error(...)`.
+
+### Implementation File Structure
+
+```
+packages/data/lib/
+  api/
+    api_client.dart          # Dio instance factory (dio confined here)
+    time_api_client.dart     # abstract interface class (no dio dependency)
+    time_api_client_impl.dart # dio implementation (only appears here)
+  time/
+    time_dto.dart            # JSON DTO (json_serializable)
+    time_dto.g.dart          # Auto-generated by build_runner (commit to repo)
+    time_repository_impl.dart # Depends only on TimeApiClient
+```
+
+### DI Assembly (ProdDeps)
+
+```dart
+final _dio = buildDioClient();
+late final TimeApiClient timeApiClient = TimeApiClientImpl(_dio);
+late final TimeRepository timeRepository = TimeRepositoryImpl(timeApiClient);
+```
+
+### KMP Correspondence
+| KMP (Ktor) | Flutter (dio) |
+|---|---|
+| `HttpClient` | `Dio` |
+| `TimeApiClient` (interface) | `TimeApiClient` (abstract interface class) |
+| `TimeApiClientImpl` | `TimeApiClientImpl` |
+| `TimeDto.toDomainObject()` | Inline conversion in `TimeRepositoryImpl` |
+
+### Code Generation
+
+When updating DTOs, execute:
+
+```bash
+cd packages/data
+dart run build_runner build --delete-conflicting-outputs
+```
+
+## 6. Future Roadmap
+
+- Establish integration methods with the `viewmodel` layer when screen-specific state management is needed.
+- Continuously update this document to clearly define implementation intent.
